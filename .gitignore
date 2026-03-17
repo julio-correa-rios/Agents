@@ -1,2 +1,21 @@
 # Env
 .env
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+
+# Distribution / packaging
+build/
+dist/
+develop-eggs/
+*.egg-info/
+
+# Specific files
+.env
