@@ -1,11 +1,13 @@
 from app.config.llm import get_llm
 from app.state import AgentState
 
-llm = get_llm()
 
 
 def planner(state: AgentState):
 
+
+    llm = get_llm()
+    
     prompt = f"""
     Decide if the following question requires web search.
 

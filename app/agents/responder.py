@@ -1,10 +1,12 @@
 from app.config.llm import get_llm
 from app.state import AgentState
 
-llm = get_llm()
+
 
 
 def responder(state: AgentState):
+    
+    llm = get_llm()
 
     prompt = f"""
     Answer the question clearly.
