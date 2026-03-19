@@ -1,5 +1,8 @@
 from tavily import TavilyClient
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialize client once
 client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
