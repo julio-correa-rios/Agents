@@ -6,31 +6,25 @@ def responder(state: AgentState):
     
     llm = get_llm()
 
+    # Adding the context from the search results
+    context = "\n\n".join([
+        f"Source: {r.source}\nContent: {r.content}"
+        for r in state.search_results
+    ])
+
     prompt = f"""
-
-    You are an AI assistant.
-
-    Answer the question using ONLY the provided search results.
-
-    If the results are insufficient or invalid, say so.
+    Answer the question using ONLY the context.
 
     Question:
     {state.user_input}
 
-    Search Results:
-    {state.search_results}
+    Context:
+    {context}
 
-    Instructions:
-    - Base your answer on the search results
+    Rules:
+    - Use sources comprehensively
     - Be concise
-    - Cite key ideas when relevant
-    - Do not invent information
-
-    Structure:
-    - Short answer
-    - Key points
-    - Recommendation
-
+    - Do not make up content
     """
 
     response = llm.invoke(prompt)

@@ -2,7 +2,7 @@ from app.state import AgentState
 from app.tools.search_tool import search_tool
 
 
-def executor(state: AgentState):
+def executor(state: AgentState) -> dict:
 
     if not state.needs_search:
         return {}

@@ -8,7 +8,7 @@ load_dotenv()
 client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 
-def search_tool(query: str) -> str:
+def search_tool(query: str) -> list[dict]:
     try:
         response = client.search(
             query=query,
@@ -19,19 +19,21 @@ def search_tool(query: str) -> str:
         results = response.get("results", [])
 
         if not results:
-            return "No relevant results found."
+            return []
 
         formatted_results = []
 
-        for i, r in enumerate(results, 1):
-            content = r.get("content", "")
-            url = r.get("url", "")
-
+        for _, r in enumerate(results):
+            
             formatted_results.append(
-                f"Result {i}:\n{content}\nSource: {url}\n"
+                {
+                   "content": r.get("content", ""),
+                   "source": r.get("url", "")
+                }
             )
 
-        return "\n".join(formatted_results)
+        return formatted_results
 
     except Exception as e:
-        return f"Search error: {str(e)}"
+        print (f"Search error: {str(e)}")
+        return []
