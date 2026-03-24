@@ -4,6 +4,7 @@ from app.state import AgentState
 
 from app.agents.planner import planner
 from app.agents.executor import executor
+from app.agents.filter import filter_results
 from app.agents.responder import responder
 from app.agents.router import should_continue
 
@@ -13,6 +14,7 @@ workflow = StateGraph(AgentState)
 # nodes
 workflow.add_node("planner", planner)
 workflow.add_node("executor", executor)
+workflow.add_node("filter", filter_results)
 workflow.add_node("responder", responder)
 
 # entry
@@ -31,7 +33,5 @@ workflow.add_conditional_edges(
             "end": "responder"
         }
     )
-
-
 
 graph = workflow.compile()
