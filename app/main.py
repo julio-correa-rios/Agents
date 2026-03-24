@@ -5,12 +5,15 @@ from app.graph import graph
 load_dotenv()
 app = FastAPI()
 
-
 @app.post("/agent")
 async def run_agent(input: str):
 
     result = graph.invoke({
-        "user_input": input
+    "user_input": input,
+    "iteration": 0,
+    "max_iterations": 3,
+    "intermediate_steps": [],
+    "search_results": []
     })
 
     return result
