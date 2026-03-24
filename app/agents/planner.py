@@ -38,6 +38,9 @@ def planner(state: AgentState):
     action = parsed.get("action", "")
     action_input = parsed.get("action_input", "")
 
+    if isinstance(action_input, dict):
+        action_input = json.dumps(action_input)
+
     logger.info(f"[Planner] Action: {action}")
     logger.debug(f"[Planner] Thought: {thought}")
 
