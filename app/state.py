@@ -10,16 +10,14 @@ class AgentState(BaseModel):
 
     user_input: str
 
-     user_input: str
-
     # --- NEW (ReAct logic implemented in this new branch) ---
     thought: Optional[str] = None
     action: Optional[str] = None
     action_input: Optional[str] = None
 
     # Updating this comment due to implementing a smarter parsing logic
-    needs_search: Optional[bool] = None
-    search_query: Optional[str] = None
+    # needs_search: Optional[bool] = None
+    # search_query: Optional[str] = None
 
     # Existing from baseline implementation
     search_results: List[SearchResult] = Field(default_factory=list)
