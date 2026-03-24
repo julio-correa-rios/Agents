@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize client once
+# Initialise client once
 client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 
@@ -13,7 +13,7 @@ def search_tool(query: str) -> list[dict]:
         response = client.search(
             query=query,
             search_depth="basic",   # fast + cheap
-            max_results=3           # keep it small
+            max_results=5           # keep it small
         )
 
         results = response.get("results", [])
@@ -35,5 +35,5 @@ def search_tool(query: str) -> list[dict]:
         return formatted_results
 
     except Exception as e:
-        print (f"Search error: {str(e)}")
+        print(f"Search error: {str(e)}")
         return []
