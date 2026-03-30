@@ -21,8 +21,12 @@ class AgentState(BaseModel):
 
     # Existing from baseline implementation
     search_results: List[SearchResult] = Field(default_factory=list)
-    final_answer: Optional[str] = None
+    search_status: Optional[str] = None  # "ok", "empty", "error", "skipped"
+    filter_status: Optional[str] = None  # "ok", "no_results", "error", "all_filtered"
+    responder_status: Optional[str] = None  # "ok", "no_data", "error"
 
+    final_answer: Optional[str] = None
+    
     # --- MEMORY ---
     intermediate_steps: List[str] = Field(default_factory=list)
 
