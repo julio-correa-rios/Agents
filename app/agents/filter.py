@@ -38,11 +38,14 @@ def build_filter_user_prompt(state: AgentState):
 
 def filter_results(state: AgentState):
 
-    logger.info("[Filter] Running relevance filter")
+    logger.info(f"[Filter] Iteration {state.iteration} | Results to filter: {len(state.search_results)}")
 
     if not state.search_results:
-        logger.info("[Filter] No results to filter")
-        return {}
+        logger.info("[Filter] No results to filter, returning empty")
+        return {
+            "search_results": [],
+            "filter_status": "no_results"
+        }
 
     llm = get_llm()
 
@@ -51,14 +54,20 @@ def filter_results(state: AgentState):
         HumanMessage(content=build_filter_user_prompt(state))
     ]
 
-    response = llm.invoke(messages).content
-
-    logger.debug(f"[Filter] Raw response: {response}")
+    try:
+        response = llm.invoke(messages).content
+        logger.debug(f"[Filter] Raw response: {response}")
+    except Exception as e:
+        logger.error(f"[Filter] LLM call failed: {e}, using all results", exc_info=True)
+        return {
+            "search_results": state.search_results,
+            "filter_status": "error"
+        }
 
     try:
         indices = [int(i.strip()) for i in response.split(",") if i.strip().isdigit()]
     except Exception as e:
-        logger.error(f"[Filter] Failed to parse indices: {e}", exc_info=True)
+        logger.error(f"[Filter] Failed to parse indices: {e}, using all results", exc_info=True)
         indices = list(range(len(state.search_results)))
 
     filtered = [
@@ -70,5 +79,6 @@ def filter_results(state: AgentState):
     logger.info(f"[Filter] Kept {len(filtered)} / {len(state.search_results)} results")
 
     return {
-        "search_results": filtered
+        "search_results": filtered,
+        "filter_status": "ok" if filtered else "all_filtered"
     }
