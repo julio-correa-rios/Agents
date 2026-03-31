@@ -1,9 +1,8 @@
-"""Checkpoint and state persistence."""
+"""Checkpoint and state persistence with SQLite."""
 
-import os
 import logging
 from pathlib import Path
-from langgraph.checkpoint.memory import MemorySaver
+from app.db.sqlite_checkpointer import SqliteCheckpointer
 
 logger = logging.getLogger(__name__)
 
@@ -13,25 +12,39 @@ _saver_instance = None
 
 def get_checkpoint_saver():
     """
-    Get or create a checkpoint saver.
+    Get or create a checkpoint saver with SQLite persistence.
     
-    Note: This uses MemorySaver for in-memory checkpointing.
-    For persistence across server restarts, implement a custom
-    saver with SQLAlchemy + SQLite or PostgreSQL.
+    Data is persisted in checkpoints.db and survives server restarts.
+    Uses hybrid approach: MemorySaver for speed + SQLite for durability.
     
     Returns:
-        MemorySaver instance for checkpoint management
+        SqliteCheckpointer instance for checkpoint management
     """
     
     global _saver_instance
     if _saver_instance is None:
-        logger.info("[Checkpointing] Initializing MemorySaver for session checkpointing")
-        _saver_instance = MemorySaver()
+        logger.info("[Checkpointing] Initializing SqliteCheckpointer with persistent storage")
+        _saver_instance = SqliteCheckpointer()
     
     return _saver_instance
 
 
-def clear_checkpoints():
+def list_sessions():
+    """List all saved sessions."""
+    return SqliteCheckpointer.list_sessions()
+
+
+def clear_session(thread_id: str):
+    """Clear a specific session's checkpoints."""
+    return SqliteCheckpointer.clear_session(thread_id)
+
+
+def clear_all_checkpoints():
+    """Clear all checkpoints (use with caution)."""
+    return SqliteCheckpointer.clear_all()
+
+
+def clear_checkpoint_saver():
     """
     Clear checkpoint saver (reset for testing).
     """

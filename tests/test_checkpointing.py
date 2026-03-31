@@ -1,9 +1,23 @@
-"""Tests for checkpoint persistence."""
+"""Tests for checkpoint persistence with MemorySaver (legacy)."""
 
 import pytest
+from pathlib import Path
 from app.state import AgentState, SearchResult
 from app.graph import create_graph
-from app.db.checkpointing import clear_checkpoints, get_checkpoint_saver
+from app.db.checkpointing import get_checkpoint_saver, clear_checkpoint_saver
+
+# Remove old database for clean testing
+from app.db.sqlite_checkpointer import DB_PATH
+if DB_PATH.exists():
+    DB_PATH.unlink()
+
+
+@pytest.fixture(autouse=True)
+def cleanup():
+    """Clean up before each test."""
+    clear_checkpoint_saver()
+    yield
+    clear_checkpoint_saver()
 
 
 def test_checkpoint_saver_creation():
@@ -15,9 +29,6 @@ def test_checkpoint_saver_creation():
 def test_graph_with_checkpoint():
     """Test graph invocation with checkpoint config."""
     thread_id = "test-session-1"
-    
-    # Clear previous checkpoints
-    clear_checkpoints()
     
     # Create graph with checkpointer
     saver = get_checkpoint_saver()
@@ -41,8 +52,6 @@ def test_graph_with_checkpoint():
 
 def test_multiple_sessions_isolated():
     """Test that different thread_ids maintain separate states."""
-    clear_checkpoints()
-    
     saver = get_checkpoint_saver()
     graph = create_graph(checkpointer=saver)
     
