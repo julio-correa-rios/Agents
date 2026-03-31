@@ -32,3 +32,7 @@ langgraph/
 langsmith/
 .langgraph_api/
 *.pckl
+
+# SQLite checkpoint databases
+checkpoints.db
+*.db
