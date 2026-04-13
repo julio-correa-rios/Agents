@@ -11,14 +11,33 @@ def responder(state: AgentState):
 
     logger.info(f"[Responder] Iteration {state.iteration} | Results: {len(state.search_results)}")
 
-    # Handle empty results
     if not state.search_results:
-        logger.warning("[Responder] No search results available")
-        final_answer = "No pude encontrar información suficiente para responder tu pregunta. Intenta reformularla o busca algo más específico."
-        return {
-            "final_answer": final_answer,
-            "responder_status": "no_data"
-        }
+        if state.final_answer and state.final_answer != "ready":
+            logger.info("[Responder] Using planner's direct answer (no search needed)")
+            return {
+                "final_answer": state.final_answer,
+                "responder_status": "ok"
+            }
+
+        logger.warning("[Responder] No search results and no direct answer available")
+        prompt = f"""The user asked the following question but no search results were found.
+            Answer the question using your own knowledge. If you truly cannot answer, say so.
+
+            Question:
+            {state.user_input}
+            """
+        try:
+            response = llm.invoke(prompt)
+            return {
+                "final_answer": response.content,
+                "responder_status": "ok"
+            }
+        except Exception as e:
+            logger.error(f"[Responder] Fallback LLM call failed: {e}", exc_info=True)
+            return {
+                "final_answer": "I couldn't find enough information to answer your question. Try rephrasing it or searching for something more specific.",
+                "responder_status": "no_data"
+            }
 
     # Building context from search results
     context = "\n\n".join([

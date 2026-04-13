@@ -58,6 +58,6 @@ def planner(state: AgentState):
     }
 
     if action == "answer":
-        updates["final_answer"] = "ready"
+        updates["final_answer"] = action_input or "ready"
 
     return updates
