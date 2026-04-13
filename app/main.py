@@ -1,6 +1,7 @@
 import logging
 import uuid
 from fastapi import FastAPI, HTTPException
+from typing import Optional
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from app.graph import create_graph
@@ -20,7 +21,7 @@ app = FastAPI()
 
 class AgentRequest(BaseModel):
     user_input: str
-    thread_id: str = None
+    thread_id: Optional[str] = None
 
 
 class AgentResponse(BaseModel):
@@ -57,22 +58,23 @@ async def run_agent(request: AgentRequest):
 
 @app.post("/agent/resume")
 async def resume_agent(thread_id: str):
-    """Resume an existing agent session."""
+    """Resume an existing agent session from its last checkpoint."""
     logger.info(f"[API] Resuming thread: {thread_id}")
-    
+
+    config = {"configurable": {"thread_id": thread_id}}
+
     try:
-        # Get last checkpoint for this thread
-        result = graph.invoke(
-            {
-                "user_input": "",  # Continue from last state
-                "iteration": 0,
-                "max_iterations": 3,
-                "intermediate_steps": [],
-                "search_results": []
-            },
-            config={"configurable": {"thread_id": thread_id}}
-        )
+        checkpoint = saver.get(config)
+        if not checkpoint:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No checkpoint found for thread '{thread_id}'"
+            )
+
+        result = graph.invoke(None, config=config)
         return AgentResponse(thread_id=thread_id, result=result)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error resuming: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
