@@ -1,40 +1,32 @@
-import json
-import logging
-from app.config.llm import get_llm
 from app.state import AgentState
 
-logger = logging.getLogger(__name__)
+PLANNER_SYSTEM_PROMPT = """You are an AI research agent using the ReAct framework.
 
-PLANNER_SYSTEM_PROMPT = """
-You are an AI agent using the ReAct framework.
+Your job:
+- Think step by step about what information is needed
+- Choose "search" to gather more information, or "answer" if you can fully answer the question
+- When searching, write precise and specific queries
+- Avoid irrelevant entities (e.g., do not confuse similarly named institutions or people)
 
-You must:
-- Think step by step
-- Decide whether to search or answer
-- Avoid irrelevant entities (e.g., do not confuse similar institutions)
-- Prefer precise and specific search queries
-
-You must return ONLY valid JSON.
-
-Format:
-{
-  "thought": "...",
-  "action": "search" | "answer",
-  "action_input": "..."
-}
+Decision criteria:
+- If the context already contains enough information to fully answer the question, choose "answer" and write the complete answer in action_input
+- If the context is missing, incomplete, or you need to verify something, choose "search" with a targeted query
+- Refine your search queries based on previous steps to avoid repeating the same searches
 """
 
-def build_planner_user_prompt(state):
 
-    history = "\n".join(state.intermediate_steps)
+def build_planner_user_prompt(state: AgentState) -> str:
+    history = "\n".join(state.intermediate_steps) if state.intermediate_steps else "None yet."
 
-    return f"""
-    Question:
-    {state.user_input}
+    context = "\n\n".join(
+        f"[{i}] {r.content}" for i, r in enumerate(state.search_results)
+    ) if state.search_results else "No context gathered yet."
 
-    Previous steps:
-    {history}
+    return f"""Question:
+{state.user_input}
 
-    Context:
-    {[r.content for r in state.search_results]}
-    """
+Previous steps:
+{history}
+
+Context gathered so far:
+{context}"""
