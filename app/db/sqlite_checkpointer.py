@@ -72,38 +72,28 @@ class SqliteCheckpointer(MemorySaver):
         init_sqlite_db()
         logger.info("[SqliteCheckpointer] Initialized with persistent storage")
     
-    def put(self, config: Dict[str, Any], values: Dict[str, Any], 
-            metadata: Dict[str, Any], thread_ns: tuple = ("default",)):
+    def put(self, config: Dict[str, Any], checkpoint: Dict[str, Any],
+            metadata: Dict[str, Any], new_versions: Dict[str, Any]) -> Dict[str, Any]:
         """Save checkpoint to memory and SQLite."""
-        # Save to memory first
-        super().put(config, values, metadata, thread_ns)
-        
-        # Save to SQLite - only keep essential info
+        result_config = super().put(config, checkpoint, metadata, new_versions)
+
         thread_id = config.get("configurable", {}).get("thread_id", "unknown")
         checkpoint_id = config.get("configurable", {}).get("checkpoint_id", str(datetime.now().timestamp()))
-        # Handle both dict and tuple formats for thread_ns
-        checkpoint_ns = ""
-        if isinstance(thread_ns, dict):
-            checkpoint_ns = str(thread_ns)
-        elif isinstance(thread_ns, (tuple, list)) and len(thread_ns) > 0:
-            checkpoint_ns = thread_ns[0]
-        
+        checkpoint_ns = config.get("configurable", {}).get("checkpoint_ns", "")
+
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
-            # Create simplified config with only essential info
-            simple_config = {
-                "configurable": config.get("configurable", {})
-            }
-            
-            # Serialize to JSON with custom encoder for non-serializable objects
-            config_json = json.dumps(simple_config, default=_json_encoder_default)
-            values_json = json.dumps(values, default=_json_encoder_default)
+
+            config_json = json.dumps(
+                {"configurable": config.get("configurable", {})},
+                default=_json_encoder_default
+            )
+            checkpoint_json = json.dumps(checkpoint, default=_json_encoder_default)
             metadata_json = json.dumps(metadata, default=_json_encoder_default)
-            
+
             cursor.execute("""
-                INSERT OR REPLACE INTO checkpoints 
+                INSERT OR REPLACE INTO checkpoints
                 (thread_id, checkpoint_id, checkpoint_ns, config, state_values, metadata, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """, (
@@ -111,55 +101,46 @@ class SqliteCheckpointer(MemorySaver):
                 checkpoint_id,
                 checkpoint_ns,
                 config_json,
-                values_json,
+                checkpoint_json,
                 metadata_json
             ))
-            
+
             conn.commit()
             conn.close()
             logger.debug(f"[SQLite] Saved checkpoint for {thread_id}")
         except Exception as e:
             logger.error(f"[SQLite] Error saving checkpoint: {e}")
-    
-    def get(self, config: Dict[str, Any], thread_ns: tuple = ("default",)):
+
+        return result_config
+
+    def get(self, config: Dict[str, Any]):
         """Retrieve checkpoint (first from memory, fallback to SQLite)."""
-        # Try memory first
-        result = super().get(config, thread_ns)
+        result = super().get(config)
         if result:
             return result
-        
-        # Fallback to SQLite
+
         thread_id = config.get("configurable", {}).get("thread_id", "unknown")
-        # Handle both dict and tuple formats for thread_ns
-        checkpoint_ns = ""
-        if isinstance(thread_ns, dict):
-            checkpoint_ns = str(thread_ns)
-        elif isinstance(thread_ns, (tuple, list)) and len(thread_ns) > 0:
-            checkpoint_ns = thread_ns[0]
-        
+        checkpoint_ns = config.get("configurable", {}).get("checkpoint_ns", "")
+
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 SELECT config, state_values, metadata FROM checkpoints
                 WHERE thread_id = ? AND checkpoint_ns = ?
                 ORDER BY created_at DESC LIMIT 1
             """, (thread_id, checkpoint_ns))
-            
+
             row = cursor.fetchone()
             conn.close()
-            
+
             if row:
                 logger.debug(f"[SQLite] Recovered checkpoint for {thread_id}")
-                return {
-                    "config": json.loads(row[0]),
-                    "values": json.loads(row[1]),
-                    "metadata": json.loads(row[2])
-                }
+                return json.loads(row[1])
         except Exception as e:
             logger.error(f"[SQLite] Error retrieving checkpoint: {e}")
-        
+
         return None
     
     @staticmethod
