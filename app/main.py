@@ -1,9 +1,12 @@
+import asyncio
 import logging
 import uuid
-from fastapi import FastAPI, HTTPException
 from typing import Optional
+
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
+
 from app.graph import create_graph
 from app.db.checkpointing import get_checkpoint_saver, list_sessions, clear_session
 from app.config.logging import setup_logging
@@ -40,7 +43,8 @@ async def run_agent(request: AgentRequest):
     logger.info(f"[API] Thread: {thread_id}")
 
     try:
-        result = graph.invoke(
+        result = await asyncio.to_thread(
+            graph.invoke,
             {
                 "user_input": request.user_input,
                 "iteration": 0,
@@ -64,14 +68,14 @@ async def resume_agent(thread_id: str):
     config = {"configurable": {"thread_id": thread_id}}
 
     try:
-        checkpoint = saver.get(config)
+        checkpoint = await asyncio.to_thread(saver.get, config)
         if not checkpoint:
             raise HTTPException(
                 status_code=404,
                 detail=f"No checkpoint found for thread '{thread_id}'"
             )
 
-        result = graph.invoke(None, config=config)
+        result = await asyncio.to_thread(graph.invoke, None, config=config)
         return AgentResponse(thread_id=thread_id, result=result)
     except HTTPException:
         raise
@@ -84,7 +88,7 @@ async def resume_agent(thread_id: str):
 async def list_agent_sessions():
     """List all saved sessions with checkpoint metadata."""
     try:
-        sessions = list_sessions()
+        sessions = await asyncio.to_thread(list_sessions)
         return {"status": "ok", "sessions": sessions}
     except Exception as e:
         logger.error(f"Error listing sessions: {e}")
@@ -95,7 +99,7 @@ async def list_agent_sessions():
 async def delete_session(thread_id: str):
     """Delete a specific session and all its checkpoints."""
     try:
-        success = clear_session(thread_id)
+        success = await asyncio.to_thread(clear_session, thread_id)
         if success:
             return {"status": "ok", "message": f"Session {thread_id} deleted"}
         else:
