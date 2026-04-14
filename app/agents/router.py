@@ -1,16 +1,15 @@
 import logging
 from app.state import AgentState
 
-
-# def route_after_planner(state: AgentState):
-
-#     # This is what it needs to get done after getting and understanding the task in the planner node
-#     if state.needs_search:
-#         return "executor"
-
-#     return "responder"
-
 logger = logging.getLogger(__name__)
+
+
+def route_after_planner(state: AgentState):
+    """Skip executor/filter when the planner already has a direct answer."""
+    if state.action == "answer":
+        logger.info("[Router] Planner chose 'answer', skipping to responder")
+        return "responder"
+    return "executor"
 
 
 def should_continue(state: AgentState):
