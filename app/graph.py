@@ -6,7 +6,7 @@ from app.agents.planner import planner
 from app.agents.executor import executor
 from app.agents.filter import filter_results
 from app.agents.responder import responder
-from app.agents.router import should_continue
+from app.agents.router import route_after_planner, should_continue
 
 
 def create_graph(checkpointer=None):
@@ -31,8 +31,15 @@ def create_graph(checkpointer=None):
     # entry
     workflow.set_entry_point("planner")
 
-    # flow
-    workflow.add_edge("planner", "executor")
+    # planner routes to executor (search) or directly to responder (answer)
+    workflow.add_conditional_edges(
+        "planner",
+        route_after_planner,
+        {
+            "executor": "executor",
+            "responder": "responder"
+        }
+    )
     workflow.add_edge("executor", "filter")
 
     # conditional routing
@@ -47,13 +54,15 @@ def create_graph(checkpointer=None):
 
     # Compile without checkpointer (LangGraph CLI compatibility)
     # Checkpointer added only in FastAPI (main.py)
-    if checkpointer:
-        graph = workflow.compile(checkpointer=checkpointer)
-    else:
-        graph = workflow.compile()
-    
-    return graph
+    return workflow.compile(checkpointer=checkpointer)
 
 
-# Create graph instance WITHOUT checkpointer (for LangGraph CLI)
-graph = create_graph()
+# Lazy singleton for LangGraph CLI (avoids compilation at import time)
+_cli_graph = None
+
+
+def get_graph():
+    global _cli_graph
+    if _cli_graph is None:
+        _cli_graph = create_graph()
+    return _cli_graph
