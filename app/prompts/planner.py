@@ -16,7 +16,10 @@ Decision criteria:
 
 
 def build_planner_user_prompt(state: AgentState) -> str:
-    history = "\n".join(state.intermediate_steps) if state.intermediate_steps else "None yet."
+    history = "\n".join(
+        f"Step {s.iteration}: {s.thought} → {s.action}({s.action_input})"
+        for s in state.intermediate_steps
+    ) if state.intermediate_steps else "None yet."
 
     context = "\n\n".join(
         f"[{i}] {r.content}" for i, r in enumerate(state.search_results)
